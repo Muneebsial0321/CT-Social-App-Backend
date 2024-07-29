@@ -1,6 +1,9 @@
 const User = require('../Schemas/User'); // Adjust the path to your User model if necessary
 const transporter = require('../functions/NodeMailer')
 const Picture_ = require('../Schemas/Pictures')
+const path = require('path');
+const fs = require('fs');
+const e = require('express');
 // Get Users
 const getUsers = async (req, res) => {
   try {
@@ -135,23 +138,33 @@ const viewProfilePicture = async(req,res) =>{
   }
 
 }
-const deleteProfilePicture = async(req,res) =>{
-  if (!req.file) {
-    return res.status(400).send('Error: No file uploaded');
-  }
-  const userId = req.params.id
-  const pictureUrl = `http://localhost:5000/images/profilepic/${req.file.filename}`
-  const pictureName = req.file.filename
-  try {
-    const pic = new Picture_({ userId,pictureName,pictureUrl})
-    await pic.save()
-    res.send('File uploaded successfully');
-  } catch (error) {
-    res.send("error occured")
-    
-  }
+const deleteProfilePicture = async (req, res) => {
 
+
+try {
+  
+
+  const { id } = req.params;
+  const pic = await Picture_.findOne({userId:id})
+  const { pictureName } = pic;
+  const filePath = path.join(__dirname, '..','public', 'images', 'profilepic', pictureName);
+
+  // Log the file path to ensure it is correct
+  console.log(`Attempting to delete file: ${filePath}`);
+
+  fs.unlink(filePath, async(err) => {
+    if (err) {
+      console.error('File deletion error:', err); // Log the full error for debugging
+      return res.status(500).json({ error: 'File not found or could not be deleted', details: err.message });
+    }
+
+    await Picture_.findOneAndDelete({userId:id})
+    res.json({ message: 'File deleted successfully' });
+  });
+} catch (error) {
+  console.log(error)
 }
+};
 
 
 module.exports = {
