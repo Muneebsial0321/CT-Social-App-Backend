@@ -6,7 +6,6 @@ const db =require('./Config/Mongoose')
 const upload = require('./functions/profileUpload');
 db()
 
-
 // // middlewares
 app.use(express.json())
 app.use(express.static('public'))

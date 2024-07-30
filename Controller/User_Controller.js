@@ -110,6 +110,23 @@ const uploadProfilePicture = async(req,res) =>{
   }
 
 }
+const uploadVideo = async(req,res) =>{
+  if (!req.file) {
+    return res.status(400).send('Error: No file uploaded');
+  }
+  const userId = req.params.id
+  const pictureUrl = `http://localhost:5000/images/profilepic/${req.file.filename}`
+  const pictureName = req.file.filename
+  try {
+    // const pic = new Picture_({ userId,pictureName,pictureUrl})
+    // await pic.save()
+    res.send('File uploaded successfully');
+  } catch (error) {
+    res.send("error occured")
+    
+  }
+
+}
 const changeProfilePicture = async(req,res) =>{
   if (!req.file) {
     return res.status(400).send('Error: No file uploaded');
@@ -168,6 +185,7 @@ try {
 
 
 module.exports = {
+  uploadVideo,
   changeProfilePicture,
   deleteProfilePicture,
   viewProfilePicture,
