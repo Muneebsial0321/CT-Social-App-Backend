@@ -1,9 +1,13 @@
 const User = require('../Schemas/User'); // Adjust the path to your User model if necessary
 const transporter = require('../functions/NodeMailer')
 const Picture_ = require('../Schemas/Pictures')
+const Video = require('../Schemas/Videos')
 const path = require('path');
+const { GetObjectCommand,DeleteObjectCommand } = require('@aws-sdk/client-s3');
+const { Readable } = require('stream');
 const fs = require('fs');
-const e = require('express');
+const s3 = require("../Config/aws")
+
 // Get Users
 const getUsers = async (req, res) => {
   try {
@@ -97,9 +101,10 @@ const uploadProfilePicture = async(req,res) =>{
   if (!req.file) {
     return res.status(400).send('Error: No file uploaded');
   }
+  console.log(req.file)
   const userId = req.params.id
-  const pictureUrl = `http://localhost:5000/images/profilepic/${req.file.filename}`
-  const pictureName = req.file.filename
+  const pictureUrl = req.file.location
+  const pictureName = req.file.key
   try {
     const pic = new Picture_({ userId,pictureName,pictureUrl})
     await pic.save()
@@ -115,29 +120,32 @@ const uploadVideo = async(req,res) =>{
     return res.status(400).send('Error: No file uploaded');
   }
   const userId = req.params.id
-  const pictureUrl = `http://localhost:5000/images/profilepic/${req.file.filename}`
-  const pictureName = req.file.filename
+  const videoUrl = req.file.location
+  const videoName = req.file.key
   try {
-    // const pic = new Picture_({ userId,pictureName,pictureUrl})
-    // await pic.save()
+    const vid = new Video({ userId,videoName,videoUrl})
+    await vid.save()
     res.send('File uploaded successfully');
   } catch (error) {
-    res.send("error occured")
+    console.log("error occured",error)
     
   }
 
 }
-const changeProfilePicture = async(req,res) =>{
-  if (!req.file) {
-    return res.status(400).send('Error: No file uploaded');
-  }
-  const userId = req.params.id
-  const pictureUrl = `http://localhost:5000/images/profilepic/${req.file.filename}`
-  const pictureName = req.file.filename
+const viewVideo = async(req,res) =>{
   try {
-    const pic = new Picture_({ userId,pictureName,pictureUrl})
-    await pic.save()
-    res.send('File uploaded successfully');
+    const userId = req.params.id
+    const vid = await Video.findOne({userId:userId})
+    const key = vid.videoName;
+        const params = {
+            Bucket: process.env.AWS_BUCKET_NAME,
+            Key: key,
+        };
+        const command = new GetObjectCommand(params);
+        const response = await s3.send(command);
+        // Stream the response body to the client
+        const stream = Readable.from(response.Body);
+        stream.pipe(res);
   } catch (error) {
     res.send("error occured")
     
@@ -148,45 +156,70 @@ const viewProfilePicture = async(req,res) =>{
   try {
     const userId = req.params.id
     const pic = await Picture_.findOne({userId:userId})
-    res.json({link:pic.pictureUrl});
+    const key = pic.pictureName;
+        const params = {
+            Bucket: process.env.AWS_BUCKET_NAME,
+            Key: key,
+        };
+        const command = new GetObjectCommand(params);
+        const response = await s3.send(command);
+        // Stream the response body to the client
+        const stream = Readable.from(response.Body);
+        stream.pipe(res);
   } catch (error) {
     res.send("error occured")
     
   }
 
 }
-const deleteProfilePicture = async (req, res) => {
 
+const deleteVideo = async (req, res) => {
+  const userId = req.params.id
+  const pic = await Video.findOne({userId:userId})
+  const key = pic.videoName;
+  try {
+      const params = {
+          Bucket: process.env.AWS_BUCKET_NAME,
+          Key: key,
+      };
 
-try {
-  
+      const command = new DeleteObjectCommand(params);
+      await s3.send(command);
 
-  const { id } = req.params;
-  const pic = await Picture_.findOne({userId:id})
-  const { pictureName } = pic;
-  const filePath = path.join(__dirname, '..','public', 'images', 'profilepic', pictureName);
+      // Optionally, remove the file reference from the database
+      await Video.deleteOne({ videoName: key });
 
-  // Log the file path to ensure it is correct
-  console.log(`Attempting to delete file: ${filePath}`);
-
-  fs.unlink(filePath, async(err) => {
-    if (err) {
-      console.error('File deletion error:', err); // Log the full error for debugging
-      return res.status(500).json({ error: 'File not found or could not be deleted', details: err.message });
-    }
-
-    await Picture_.findOneAndDelete({userId:id})
-    res.json({ message: 'File deleted successfully' });
-  });
-} catch (error) {
-  console.log(error)
+      res.status(200).json({ message: 'File deleted successfully' });
+  } catch (err) {
+      res.status(500).json({ error: err.message });
+  }
 }
-};
+const deleteProfilePicture = async (req, res) => {
+  const userId = req.params.id
+  const pic = await Picture_.findOne({userId:userId})
+  const key = pic.pictureName;
+  try {
+      const params = {
+          Bucket: process.env.AWS_BUCKET_NAME,
+          Key: key,
+      };
 
+      const command = new DeleteObjectCommand(params);
+      await s3.send(command);
+
+      // Optionally, remove the file reference from the database
+      await Video.deleteOne({ videoName: key });
+
+      res.status(200).json({ message: 'File deleted successfully' });
+  } catch (err) {
+      res.status(500).json({ error: err.message });
+  }
+}
 
 module.exports = {
   uploadVideo,
-  changeProfilePicture,
+  viewVideo,
+  deleteVideo,
   deleteProfilePicture,
   viewProfilePicture,
   uploadProfilePicture,

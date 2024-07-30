@@ -1,6 +1,7 @@
 const express = require('express');
 const app = express.Router()
-const { uploadVideo, changeProfilePicture,
+const { uploadVideo,viewVideo,
+    deleteVideo,
     deleteProfilePicture,
     viewProfilePicture,
     uploadProfilePicture,
@@ -10,7 +11,7 @@ const { uploadVideo, changeProfilePicture,
     updateUser,
     deleteUser} = require('../Controller/User_Controller')
 const upload = require("../functions/profileUpload")
-const video= require('../functions/videoUpload')
+// const video= require('../functions/videoUpload')
 
 app.get('/',getUsers)
 app.get('/:id',getAUser)
@@ -21,9 +22,10 @@ app.delete('/:id',deleteUser)
 // profile picture routes
 app.get('/profilepic/:id',viewProfilePicture)
 app.post('/profilepic/:id',upload.single('profilepic'),uploadProfilePicture)
-app.post('/video/:id',video.single('video'),uploadVideo)
-app.put('/profilepic/:id',upload.single('profilepic'),changeProfilePicture)
 app.delete('/profilepic/:id',deleteProfilePicture)
 
+app.post('/video/:id',upload.single('video'),uploadVideo)
+app.get('/video/:id',viewVideo)
+app.delete('/video/:id',deleteVideo)
 
 module.exports = app

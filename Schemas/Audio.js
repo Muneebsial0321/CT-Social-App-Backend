@@ -4,7 +4,7 @@ const Schema = mongoose.Schema;
 const audioSchema = new Schema({
 audioName:String,
 userId:String,
-audioUrl:string,
+audioUrl:String,
 }, {
   timestamps: true
 });

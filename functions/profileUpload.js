@@ -1,36 +1,19 @@
+const dotenv = require('dotenv')
+dotenv.config()
+const { fromEnv } = require('@aws-sdk/credential-providers');
 const multer = require('multer');
-const path = require('path');
+const multerS3 = require('multer-s3');
+const { S3Client, GetObjectCommand } = require('@aws-sdk/client-s3');
+const s3 = require("../Config/aws")
 
-// Set storage engine
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, 'public/images/profilepic'); // Ensure this directory exists
-  },
-  filename: function (req, file, cb) {
-    cb(null, file.fieldname + '-' + Date.now() + path.extname(file.originalname));
-  }
-});
-
-// Check file type
-function checkFileType(file, cb) {
-  const filetypes = /jpeg|jpg|png|gif/;
-  const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
-  const mimetype = filetypes.test(file.mimetype);
-
-  if (mimetype && extname) {
-    return cb(null, true);
-  } else {
-    cb('Error: Images Only!');
-  }
-}
-
-// Init upload
+// // Set up multer and multer-s3
 const upload = multer({
-  storage: storage,
-  limits: { fileSize: 1000000 }, // Limit file size to 1MB
-  fileFilter: function (req, file, cb) {
-    checkFileType(file, cb);
-  }
+    storage: multerS3({
+        s3: s3,
+        bucket: process.env.AWS_BUCKET_NAME,
+        key: function (req, file, cb) {
+            cb(null, Date.now().toString() + '-' + file.originalname);
+        },
+    }),
 });
-
-module.exports = upload;
+module.exports = upload

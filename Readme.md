@@ -1,3 +1,3 @@
 #aws included
 storage working 
-making routes for imgs and videos and audios
+video and pictures upload and delete routes are wrking properly

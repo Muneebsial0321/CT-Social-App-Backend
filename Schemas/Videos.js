@@ -4,7 +4,7 @@ const Schema = mongoose.Schema;
 const videoSchema = new Schema({
 videoName:String,
 userId:String,
-videoUrl:string,
+videoUrl:String,
 }, {
   timestamps: true
 });
