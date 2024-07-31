@@ -1,76 +1,70 @@
 const dotenv = require('dotenv')
 dotenv.config()
-const { fromEnv } = require('@aws-sdk/credential-providers');
 // decleartions
 const express = require('express');
 const app = express();
 const db =require('./Config/Mongoose')
-// const multer = require('multer');
-// const multerS3 = require('multer-s3');
-// const { S3Client, GetObjectCommand } = require('@aws-sdk/client-s3');
-// const { Upload } = require('@aws-sdk/lib-storage');
-// const { Readable } = require('stream');
+const passport = require('passport');
+const GoogleStrategy = require('passport-google-oauth20').Strategy;
+const User = require('./Schemas/User');
+const cors = require("cors")
+const jwt = require("jsonwebtoken")
 db() 
 
 
 
-// // exp
-// console.log(fromEnv)
+// exp
 
-// const s3 = new S3Client({
-//     region: process.env.AWS_REGION,
-//     credentials: fromEnv(),
-// });
 
-// // // Set up multer and multer-s3
-// const upload = multer({
-//     storage: multerS3({
-//         s3: s3,
-//         bucket: process.env.AWS_BUCKET_NAME,
-//         key: function (req, file, cb) {
-//             cb(null, Date.now().toString() + '-' + file.originalname);
-//         },
-//     }),
-// });
+passport.use(new GoogleStrategy({
+    clientID: process.env.CLIENT_ID,
+    clientSecret: process.env.CLIENT_SECRET,
+    callbackURL: process.env.CALL_BACK_URL
+  },  async (accessToken, refreshToken, profile, done) => {
+    const email = profile.emails && profile.emails[0].value;
+    console.log(email)
+    if (!email) {
+      return done(new Error('No email found in the Google profile'), null);
+    }
+  
+    let user = await User.findOne({ email });
+    if (!user) {
+      user = await User.create({ email, name: profile.displayName });
+    }
+  
+    console.log("profile is", profile);
+    const jwtToken = jwt.sign({ id: user._id }, 'YOUR_JWT_SECRET', { expiresIn: '1h' });
+    return done(null, { token: jwtToken });
+  }));
+  
 
-// // // Routes
+  passport.serializeUser((user, done) => {
+    done(null, user);
+  });
+  
+  passport.deserializeUser((user, done) => {
+    done(null, user);
+  });
+  
+  
+  
+  app.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
 
-// app.get('/files/:key', async (req, res) => {
-//     const key = req.params.key;
-
-//     try {
-//         const params = {
-//             Bucket: process.env.AWS_BUCKET_NAME,
-//             Key: key,
-//         };
-
-//         const command = new GetObjectCommand(params);
-
-//         const response = await s3.send(command);
-     
-
-//         // Stream the response body to the client
-//         const stream = Readable.from(response.Body);
-    
-//         stream.pipe(res);
-//     } catch (err) {
-//         res.status(500).json({ error: err.message });
-//     }
-// });
-
+  app.get('/auth/google/callback', passport.authenticate('google', { failureRedirect: '/' }),
+    (req, res) => {
+      res.send("oops")
+      // res.redirect(`http://localhost:5000/dashboard?token=${req.user.token}`);
+    }
+  );
 
 // exp end
 
 
-
-
-
-
-
 // // middlewares
 app.use(express.json())
-app.use(express.static('public'))
-app.use('/user', require('./Routes/UserRoutes')) 
+app.use(cors())
+// app.use(express.static('public'))
+// app.use('/user', require('./Routes/UserRoutes')) 
 
 
 
